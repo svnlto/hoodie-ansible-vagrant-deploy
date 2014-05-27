@@ -1,0 +1,66 @@
+---
+- hosts: all
+  sudo: yes
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: ensure ntpd is at the latest version
+      apt: pkg=ntp state=latest
+
+    - name: create deploy user
+      user: name={{deploy_user}} comment="deploy user" generate_ssh_key=yes ssh_key_bits=2048 state=present password={{deploy_user_pw}} shell=/bin/bash
+
+    - name: Add deploy user to sudoers
+      action: lineinfile dest=/etc/sudoers regexp="deploy ALL" line="deploy ALL=(ALL) ALL" state=present
+
+    - name: update apt cache
+      apt: update-cache=yes
+
+    - name: install base dependencies
+      apt: pkg={{ item }} state=installed
+      with_items:
+        - "{{ system_packages }}"
+
+    - name: get latest couchdb build
+      apt_repository: repo='ppa:couchdb/stable'
+
+    - name: ensure couchdb is installed
+      apt: pkg=couchdb state=latest update_cache=yes
+
+    - name: ensure couchdb is running
+      action: service name=couchdb state=started
+
+    - name: get latest nginx build
+      apt_repository: repo='ppa:nginx/stable'
+
+    - name: ensure nginx is installed
+      apt: pkg=nginx state=latest update_cache=yes
+
+    - name: copy nginx host configurations
+      copy: src=templates/nginx/sites-available/ dest=/etc/nginx/sites-available/
+
+    - name: symlink host config
+      file: src=/etc/nginx/sites-available/{{ item.host }} dest=/etc/nginx/sites-enabled/{{ item.host }} state=link
+      with_items:
+        - "{{ virtual_hosts }}"
+      notify: restart nginx
+
+    - name: get latest nodejs build
+      apt_repository: repo='ppa:chris-lea/node.js'
+
+    - name: install nodejs
+      apt: pkg=nodejs state=latest update_cache=yes
+
+    - name: install hoodie
+      action: shell /bin/bash -c "npm install -g hoodie-cli"
+
+    - name: install pm2
+      action: shell /bin/bash -c "npm install -g pm2"
+
+    - name: ensure nginx is running
+      action: service name=nginx state=started
+
+  handlers:
+    - name: restart nginx
+      service: name=nginx state=restarted
+

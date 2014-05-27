@@ -1,0 +1,24 @@
+---
+# crypted passwords, generated on a Linux box using:
+# echo 'import crypt,getpass; print crypt.crypt(getpass.getpass(), "$6$YOURSALT")' | python
+user: deploy
+deploy_user: deploy
+deploy_user_pw: ''
+version: v0.10.28
+
+virtual_hosts:
+  - { host: 'example.com' }
+
+system_packages:
+  - build-essential
+  - python-setuptools
+  - python-pip
+  - python-apt
+  - python-pycurl
+  - python-software-properties
+  - vim
+  - libssl-dev
+  - libexpat1-dev
+  - git-core
+  - curl
+
